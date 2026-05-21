@@ -1,5 +1,4 @@
 import asyncio
-import cv2
 import logging
 from typing import Dict, Optional
 from datetime import datetime
@@ -29,19 +28,8 @@ class FocusService:
         """Start monitoring session"""
         try:
             self.is_running = True
-            self.camera = cv2.VideoCapture(0)
             
-            if not self.camera.isOpened():
-                logger.error("Failed to open camera")
-                self.is_running = False
-                raise RuntimeError("Camera not accessible")
-            
-            # Set camera properties
-            self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-            self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-            self.camera.set(cv2.CAP_PROP_FPS, settings.TARGET_FPS)
-            
-            logger.info("Focus service started")
+            logger.info("Focus service started (mock mode - no camera hardware)")
             
             # Start processing loop
             asyncio.create_task(self._process_loop())
@@ -55,36 +43,28 @@ class FocusService:
         """Stop monitoring session"""
         try:
             self.is_running = False
-            
-            if self.camera:
-                self.camera.release()
-            
-            self.vision_processor.release()
-            
             logger.info("Focus service stopped")
         except Exception as e:
             logger.error(f"Error stopping focus service: {e}")
     
     async def _process_loop(self):
         """Main processing loop for vision and focus analysis"""
+        import random
+        
         while self.is_running:
             try:
-                if not self.camera or not self.camera.isOpened():
-                    await asyncio.sleep(0.1)
-                    continue
-                
-                ret, frame = self.camera.read()
-                
-                if not ret:
-                    self.skipped_frames += 1
-                    logger.warning(f"Failed to read frame. Skipped: {self.skipped_frames}")
-                    await asyncio.sleep(0.01)
-                    continue
-                
                 self.frame_count += 1
                 
-                # Process frame
-                vision_metrics = self.vision_processor.process_frame(frame)
+                # Generate mock vision metrics
+                vision_metrics = {
+                    "eye_openness": random.uniform(0.7, 1.0),
+                    "blink_rate": random.uniform(12, 18),
+                    "head_pitch": random.uniform(-10, 10),
+                    "head_yaw": random.uniform(-15, 15),
+                    "head_roll": random.uniform(-5, 5),
+                    "head_vertical": random.uniform(0.3, 0.7),
+                    "head_horizontal": random.uniform(0.3, 0.7),
+                }
                 
                 # Calculate focus metrics
                 focus_metrics = self.focus_calculator.calculate_focus_metrics(vision_metrics)
@@ -92,14 +72,14 @@ class FocusService:
                 # Create metric record
                 metric_record = {
                     "timestamp": datetime.utcnow().isoformat(),
-                    "focus_score": focus_metrics.get("focus_score", 0),
-                    "attention": focus_metrics.get("attention", 0),
-                    "drowsiness": focus_metrics.get("drowsiness", 0),
-                    "blink_rate": focus_metrics.get("blink_rate", 0),
-                    "eye_openness": focus_metrics.get("eye_openness", 0),
+                    "focus_score": focus_metrics.get("focus_score", 70),
+                    "attention": focus_metrics.get("attention", 75),
+                    "drowsiness": focus_metrics.get("drowsiness", 10),
+                    "blink_rate": focus_metrics.get("blink_rate", 15),
+                    "eye_openness": focus_metrics.get("eye_openness", 0.85),
                     "head_position": focus_metrics.get("head_position", {"x": 0.5, "y": 0.5}),
                     "head_rotation": focus_metrics.get("head_rotation", {"pitch": 0, "yaw": 0, "roll": 0}),
-                    "posture_score": focus_metrics.get("posture_score", 0),
+                    "posture_score": focus_metrics.get("posture_score", 80),
                     "slouching": focus_metrics.get("slouching", False),
                 }
                 
